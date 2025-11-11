@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="en" ng-app="practiceApp">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prototype: Note Compilation Business (DO-8574)</title>
+    <link rel="preconnect" href="https://ajax.googleapis.com">
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.3/angular.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: #fafafa;
+            color: #09090b;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* Top Navigation */
+        .top-nav {
+            background: white;
+            border-bottom: 1px solid #e4e4e7;
+            display: flex;
+            gap: 0;
+            padding: 0 24px;
+        }
+
+        .nav-tab {
+            padding: 16px 20px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: #71717a;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .nav-tab:hover {
+            color: #18181b;
+        }
+
+        .nav-tab.active {
+            color: #18181b;
+            border-bottom-color: #18181b;
+        }
+
+        /* Main Layout */
+        .main-layout {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 240px;
+            background: white;
+            border-right: 1px solid #e4e4e7;
+            overflow-y: auto;
+            padding: 16px 0;
+        }
+
+        .sidebar-item {
+            padding: 10px 24px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #71717a;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 2px solid transparent;
+        }
+
+        .sidebar-item:hover {
+            background: #f4f4f5;
+            color: #18181b;
+        }
+
+        .sidebar-item.active {
+            color: #18181b;
+            background: #f4f4f5;
+            border-left-color: #18181b;
+        }
+
+        /* Main Content */
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 32px;
+        }
+
+        .content-header {
+            margin-bottom: 24px;
+        }
+
+        .content-header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .content-header p {
+            font-size: 14px;
+            color: #71717a;
+        }
+
+        /* Settings List */
+        .settings-section {
+            background: white;
+            border: 1px solid #e4e4e7;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .setting-item {
+            display: flex;
+            align-items: flex-start;
+            padding: 16px 20px;
+            border-bottom: 1px solid #e4e4e7;
+            gap: 12px;
+        }
+
+        .setting-item:last-child {
+            border-bottom: none;
+        }
+
+        .setting-item:hover {
+            background: #fafafa;
+        }
+
+        .setting-toggle {
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 44px;
+            height: 24px;
+            background: #e4e4e7;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .toggle-switch.active {
+            background: #18181b;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 10px;
+            transition: transform 0.2s;
+        }
+
+        .toggle-switch.active .toggle-slider {
+            transform: translateX(20px);
+        }
+
+        .setting-content {
+            flex: 1;
+        }
+
+        .setting-label {
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .setting-exceptions {
+            font-size: 13px;
+            color: #71717a;
+            margin-top: 8px;
+            min-height: 28px;
+        }
+
+        .exception-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 8px;
+            background: #fef3c7;
+            color: #92400e;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+            margin-right: 6px;
+            margin-bottom: 6px;
+        }
+
+        .exception-badge.staff-badge {
+            background: #dbeafe;
+            color: #1e3a8a;
+        }
+
+        .manage-exceptions-btn {
+            padding: 4px 12px;
+            border: 1px solid #e4e4e7;
+            background: white;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #18181b;
+            font-weight: 500;
+        }
+
+        .manage-exceptions-btn:hover {
+            background: #f4f4f5;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid #e4e4e7;
+        }
+
+        .modal-header h2 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .modal-header p {
+            font-size: 14px;
+            color: #71717a;
+        }
+
+        .modal-tabs {
+            display: flex;
+            gap: 0;
+            border-bottom: 1px solid #e4e4e7;
+            background: #fafafa;
+        }
+
+        .modal-tab {
+            padding: 12px 20px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: #71717a;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .modal-tab:hover {
+            color: #18181b;
+        }
+
+        .modal-tab.active {
+            color: #18181b;
+            background: white;
+            border-bottom-color: #18181b;
+        }
+
+        .modal-body {
+            padding: 24px;
+            overflow-y: auto;
+        }
+
+        .exception-group {
+            margin-bottom: 24px;
+        }
+
+        .exception-group-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #71717a;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+        }
+
+        .exception-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            border: 1px solid #e4e4e7;
+            border-radius: 6px;
+            margin-bottom: 8px;
+        }
+
+        .exception-row select {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #e4e4e7;
+            border-radius: 6px;
+            font-size: 14px;
+            background: white;
+        }
+
+        .remove-btn {
+            padding: 6px 12px;
+            border: 1px solid #e4e4e7;
+            background: white;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            color: #dc2626;
+            transition: all 0.2s;
+        }
+
+        .remove-btn:hover {
+            background: #fef2f2;
+            border-color: #dc2626;
+        }
+
+        .add-exception-btn {
+            padding: 8px 16px;
+            border: 1px dashed #e4e4e7;
+            background: white;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            width: 100%;
+            color: #71717a;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        .add-exception-btn:hover {
+            border-color: #18181b;
+            color: #18181b;
+        }
+
+        .modal-footer {
+            padding: 16px 24px;
+            border-top: 1px solid #e4e4e7;
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-secondary {
+            border: 1px solid #e4e4e7;
+            background: white;
+            color: #18181b;
+        }
+
+        .btn-secondary:hover {
+            background: #f4f4f5;
+        }
+
+        .btn-primary {
+            border: none;
+            background: #18181b;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #27272a;
+        }
+
+        .checkbox-group {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .checkbox-label input {
+            cursor: pointer;
+        }
+
+        /* Searchable Dropdown */
+        .search-dropdown {
+            position: relative;
+            flex: 1;
+        }
+
+        .search-dropdown input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #e4e4e7;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .search-dropdown input:focus {
+            outline: none;
+            border-color: #18181b;
+        }
+
+        .dropdown-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #e4e4e7;
+            border-radius: 6px;
+            margin-top: 4px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 100;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .dropdown-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+
+        .dropdown-item:hover {
+            background: #f4f4f5;
+        }
+
+        .dropdown-item.selected {
+            background: #f4f4f5;
+            font-weight: 500;
+        }
+
+        .dropdown-empty {
+            padding: 12px;
+            text-align: center;
+            color: #71717a;
+            font-size: 13px;
+        }
+    </style>
+    <meta name="view-transition" content="same-origin">
+    <meta name="author" content="Timothy Martens for ICANotes, LLC">
+    <meta name="description" content="Design Engineering">
+</head>
+
+<body ng-controller="MainCtrl as vm">
+    <div class="container">
+        <!-- Top Navigation -->
+        <nav class="top-nav">
+            <button class="nav-tab" ng-class="{'active': vm.activeNav === 'practice-info'}" ng-click="vm.activeNav='practice-info'">Practice Information</button>
+            <button class="nav-tab" ng-class="{'active': vm.activeNav === 'calendar'}" ng-click="vm.activeNav='calendar'">Calendar Settings</button>
+            <button class="nav-tab" ng-class="{'active': vm.activeNav === 'portal'}" ng-click="vm.activeNav='portal'">Client Portal</button>
+            <button class="nav-tab" ng-class="{'active': vm.activeNav === 'practice-settings'}" ng-click="vm.activeNav='practice-settings'">Practice Settings</button>
+            <button class="nav-tab" ng-class="{'active': vm.activeNav === 'practice-requirements'}" ng-click="vm.activeNav='practice-requirements'">Required Data</button>
+            <button class="nav-tab" ng-class="{'active': vm.activeNav === 'revenue'}" ng-click="vm.activeNav='revenue'">Revenue Cycle Management</button>
+            <button class="nav-tab" ng-class="{'active': vm.activeNav === 'forms'}" ng-click="vm.activeNav='forms'">Practice Forms</button>
+            <button class="nav-tab" ng-class="{'active': vm.activeNav === 'note-settings'}" ng-click="vm.activeNav='note-settings'">Note Settings</button>
+            <button class="nav-tab" ng-class="{'active': vm.activeNav === 'account'}" ng-click="vm.activeNav='account'">Account Management</button>
+        </nav>
+
+        <!-- Main Layout -->
+        <div class="main-layout">
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <div class="sidebar-item" ng-class="{'active': vm.currentSectionKey === key}" ng-repeat="(key, s) in vm.sections" ng-click="vm.setSection(key)">
+                    {{ s.title }}
+                </div>
+            </aside>
+
+            <!-- Main Content -->
+            <main class="content">
+                <div class="content-header">
+                    <h1 id="section-title">{{ vm.sections[vm.currentSectionKey].title }}</h1>
+                    <p id="section-desc">{{ vm.sections[vm.currentSectionKey].desc }}</p>
+                </div>
+
+                <div class="settings-section" id="settings-list">
+                    <div class="setting-item" ng-repeat="setting in vm.sections[vm.currentSectionKey].settings">
+                        <div class="setting-toggle">
+                            <div class="toggle-switch" ng-class="{'active': setting.enabled}" ng-click="vm.toggleSetting(vm.currentSectionKey, setting.id)">
+                                <div class="toggle-slider"></div>
+                            </div>
+                        </div>
+                        <div class="setting-content">
+                            <div class="setting-label">{{ setting.label }}</div>
+
+                            <div class="setting-exceptions" ng-if="setting.enabled && setting.exceptions && setting.exceptions.length">
+                                <span class="exception-badge" ng-class="{'staff-badge': ex.type === 'staff'}" ng-repeat="ex in setting.exceptions">⚠ {{ex.name}}{{ex.noteTypes && ex.noteTypes.length ? ': ' + ex.noteTypes.join(', ') : ''}}</span>
+                                <button class="manage-exceptions-btn" ng-click="vm.openExceptionModal(vm.currentSectionKey, setting.id)">Manage Exceptions</button>
+                            </div>
+
+                            <div class="setting-exceptions" ng-if="setting.enabled && (!setting.exceptions || !setting.exceptions.length)">
+                                <button class="manage-exceptions-btn" ng-click="vm.openExceptionModal(vm.currentSectionKey, setting.id)">Add Exceptions</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Exception Management Modal -->
+    <div class="modal-overlay" ng-class="{'active': vm.modalOpen}" ng-click="vm.overlayClick($event)">
+        <div class="modal" ng-click="$event.stopPropagation()">
+            <div class="modal-header">
+                <h2 id="modal-title">{{ vm.modalTitle }}</h2>
+                <p id="modal-subtitle">{{ vm.modalSubtitle }}</p>
+            </div>
+
+            <div class="modal-tabs">
+                <button class="modal-tab" ng-class="{'active': vm.activeModalTab === 'provider'}" ng-click="vm.activeModalTab='provider'">Provider Exceptions</button>
+                <button class="modal-tab" ng-class="{'active': vm.activeModalTab === 'staff'}" ng-click="vm.activeModalTab='staff'">Staff Exceptions</button>
+            </div>
+
+            <div class="modal-body" id="modal-body">
+                <!-- Provider Exceptions Tab -->
+                <div ng-if="vm.activeModalTab === 'provider'">
+                    <div class="exception-group">
+                        <div class="exception-group-title">Provider Exceptions</div>
+
+                        <div id="provider-exceptions">
+                            <div class="exception-row" ng-repeat="row in vm.modalProviderExceptions" style="flex-direction: column; align-items: stretch;">
+                                <div style="display: flex; gap: 12px; margin-bottom: 12px;">
+                                    <div class="search-dropdown">
+                                        <input type="text" placeholder="Search for provider..." ng-model="row.searchText" ng-focus="row.showDropdown = true" ng-blur="vm.hideDropdown(row, $event)" ng-change="vm.filterProviders(row)">
+                                        <div class="dropdown-results" ng-if="row.showDropdown && row.filteredProviders.length">
+                                            <div class="dropdown-item" ng-repeat="p in row.filteredProviders" ng-class="{'selected': p === row.name}" ng-mousedown="vm.selectProvider(row, p)">
+                                                {{ p }}
+                                            </div>
+                                        </div>
+                                        <div class="dropdown-results" ng-if="row.showDropdown && !row.filteredProviders.length">
+                                            <div class="dropdown-empty">No providers found</div>
+                                        </div>
+                                    </div>
+                                    <button class="remove-btn" ng-click="vm.removeProviderException($index)">Remove</button>
+                                </div>
+
+                                <div>
+                                    <div style="font-size: 12px; font-weight: 600; color: #71717a; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">
+                                        Excluded Note Types for {{ row.name || 'Provider' }}
+                                    </div>
+                                    <div class="checkbox-group">
+                                        <label class="checkbox-label" ng-repeat="nt in vm.noteTypes">
+                                            <input type="checkbox" ng-checked="row.noteTypes.indexOf(nt) !== -1" ng-click="vm.toggleNoteType(row, nt)">
+                                            {{ nt }}
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button class="add-exception-btn" ng-click="vm.addProviderException()">+ Add Provider Exception</button>
+                    </div>
+                </div>
+
+                <!-- Staff Exceptions Tab -->
+                <div ng-if="vm.activeModalTab === 'staff'">
+                    <div class="exception-group">
+                        <div class="exception-group-title">Staff Exceptions</div>
+
+                        <div id="staff-exceptions">
+                            <div class="exception-row" ng-repeat="row in vm.modalStaffExceptions" style="flex-direction: column; align-items: stretch;">
+                                <div style="display: flex; gap: 12px; margin-bottom: 12px;">
+                                    <div class="search-dropdown">
+                                        <input type="text" placeholder="Search for staff member..." ng-model="row.searchText" ng-focus="row.showDropdown = true" ng-blur="vm.hideDropdown(row, $event)" ng-change="vm.filterStaff(row)">
+                                        <div class="dropdown-results" ng-if="row.showDropdown && row.filteredStaff.length">
+                                            <div class="dropdown-item" ng-repeat="s in row.filteredStaff" ng-class="{'selected': s === row.name}" ng-mousedown="vm.selectStaff(row, s)">
+                                                {{ s }}
+                                            </div>
+                                        </div>
+                                        <div class="dropdown-results" ng-if="row.showDropdown && !row.filteredStaff.length">
+                                            <div class="dropdown-empty">No staff members found</div>
+                                        </div>
+                                    </div>
+                                    <button class="remove-btn" ng-click="vm.removeStaffException($index)">Remove</button>
+                                </div>
+
+                                <div>
+                                    <div style="font-size: 12px; font-weight: 600; color: #71717a; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">
+                                        Excluded Note Types for {{ row.name || 'Staff Member' }}
+                                    </div>
+                                    <div class="checkbox-group">
+                                        <label class="checkbox-label" ng-repeat="nt in vm.noteTypes">
+                                            <input type="checkbox" ng-checked="row.noteTypes.indexOf(nt) !== -1" ng-click="vm.toggleNoteType(row, nt)">
+                                            {{ nt }}
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button class="add-exception-btn" ng-click="vm.addStaffException()">+ Add Staff Exception</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" ng-click="vm.closeModal()">Cancel</button>
+                <button class="btn btn-primary" ng-click="vm.saveExceptions()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        angular.module('practiceApp', [])
+            .controller('MainCtrl', ['$scope', function ($scope) {
+                const vm = this;
+
+                vm.activeNav = 'practice-requirements';
+
+                vm.noteTypes = [
+                    'ASAM',
+                    'Case Management',
+                    'Clinical Summary',
+                    'Complete Evaluation',
+                    'Couples/Family Therapy',
+                    'Discharge Summary',
+                    'Group Therapy Progress Note',
+                    'Primary Care Note',
+                    'Progress Note',
+                    'Quick Note',
+                    'SOAP Note'
+                ];
+
+                vm.providers = [
+                    'Dr. Wilson',
+                    'Dr. Trainer',
+                    'Dr. Johnson',
+                    'Dr. Smith',
+                    'Dr. Lee',
+                    'Dr. Martinez'
+                ];
+
+                vm.staff = [
+                    'Sarah Johnson',
+                    'Michael Chen',
+                    'Emily Rodriguez',
+                    'James Patterson',
+                    'Lisa Anderson',
+                    'David Thompson'
+                ];
+
+                vm.sections = {
+                    notes: {
+                        title: 'Clinical Notes',
+                        desc: 'Configure required fields for clinical notes and documentation',
+                        settings: [
+                            {
+                                id: 'diagnosis-code', label: 'Diagnosis Code', enabled: true, exceptions: [
+                                    { type: 'provider', name: 'Dr. Wilson', noteTypes: ['Quick Note'] },
+                                    { type: 'provider', name: 'Dr. Trainer', noteTypes: ['Quick Note', 'SOAP Note', 'ASAM'] },
+                                    { type: 'staff', name: 'Sarah Johnson', noteTypes: ['Quick Note', 'Progress Note'] }
+                                ]
+                            },
+                            { id: 'service-code', label: 'Service Code', enabled: true },
+                            { id: 'time-spent', label: 'Time Spent', enabled: true },
+                            { id: 'completed-tp', label: 'Completed Treatment Plan', enabled: false },
+                            { id: 'new-tp-overdue', label: 'New Treatment Plan if Overdue', enabled: true },
+                            { id: 'tp-to-create', label: 'Treatment Plan to Create', enabled: false },
+                            { id: 'icd10', label: 'ICD-10 (post 10/1/2015)', enabled: true },
+                            { id: 'justify-loc', label: 'Justify Level of Care', enabled: false },
+                            { id: 'custom-note-title', label: 'Custom Note Title', enabled: false }
+                        ]
+                    },
+                    assessments: {
+                        title: 'Assessments',
+                        desc: 'Configure required fields for clinical assessments',
+                        settings: [
+                            { id: 'mse-non-rx', label: 'MSE for Non-Rx Complete Assessments', enabled: true },
+                            { id: 'suicide-violence', label: 'Suicide/Violence Assessment', enabled: true, exceptions: [{ type: 'note-type', name: 'Quick Note' }] }
+                        ]
+                    },
+                    demographics: {
+                        title: 'Patient Demographics',
+                        desc: 'Configure required patient demographic information',
+                        settings: [
+                            { id: 'address', label: 'Address', enabled: true },
+                            { id: 'phone', label: 'Phone', enabled: true },
+                            { id: 'email', label: 'Email Address', enabled: false },
+                            { id: 'ssn', label: 'SSN', enabled: false },
+                            { id: 'ethnicity', label: 'Ethnicity', enabled: true },
+                            { id: 'race', label: 'Race', enabled: true },
+                            { id: 'marital-status', label: 'Marital Status', enabled: false },
+                            { id: 'disability', label: 'Disability', enabled: false },
+                            { id: 'family-size', label: 'Family Size', enabled: false },
+                            { id: 'employment', label: 'Employment Status', enabled: false },
+                            { id: 'income', label: 'Annual Household Income', enabled: false },
+                            { id: 'referred-by', label: 'Referred By', enabled: false },
+                            { id: 'emergency-contact', label: 'Emergency Contact', enabled: true }
+                        ]
+                    },
+                    insurance: {
+                        title: 'Insurance',
+                        desc: 'Configure required insurance information',
+                        settings: [
+                            { id: 'insurance-short-list', label: 'Insurance Short List', enabled: true },
+                            { id: 'coverage-details', label: 'Insurance Coverage Details', enabled: true },
+                            { id: 'medicaid-number', label: 'Medicaid Number', enabled: false }
+                        ]
+                    },
+                    medication: {
+                        title: 'Medication Management',
+                        desc: 'Configure required fields for medication management',
+                        settings: [
+                            { id: 'permission-rx', label: 'Permission to Add/Edit Rx', enabled: true },
+                            { id: 'med-consent', label: 'Medication Consent', enabled: true },
+                            { id: 'reason-prescribed', label: 'Reason Prescribed', enabled: true },
+                            { id: 'reason-vo', label: 'Reason Prescribed for Verbal Order', enabled: true }
+                        ]
+                    },
+                    scheduling: {
+                        title: 'Scheduling',
+                        desc: 'Configure required fields for scheduling and appointments',
+                        settings: [
+                            { id: 'follow-up', label: 'Follow Up', enabled: false },
+                            { id: 'location', label: 'Location in Calendar Events', enabled: true },
+                            { id: 'where-seen', label: 'Where Seen', enabled: true }
+                        ]
+                    }
+                };
+
+                vm.currentSectionKey = 'notes';
+
+                // Modal state
+                vm.modalOpen = false;
+                vm.modalTitle = '';
+                vm.modalSubtitle = '';
+                vm.activeModalTab = 'provider';
+                vm.modalProviderExceptions = [];
+                vm.modalStaffExceptions = [];
+                vm.currentSettingId = null;
+
+                vm.setSection = function (key) {
+                    vm.currentSectionKey = key;
+                };
+
+                vm.toggleSetting = function (sectionKey, settingId) {
+                    const setting = vm.sections[sectionKey].settings.find(s => s.id === settingId);
+                    setting.enabled = !setting.enabled;
+                };
+
+                vm.openExceptionModal = function (sectionKey, settingId) {
+                    vm.currentSectionKey = sectionKey;
+                    vm.currentSettingId = settingId;
+                    const setting = vm.sections[sectionKey].settings.find(s => s.id === settingId);
+                    vm.modalTitle = 'Manage Exceptions: ' + setting.label;
+                    vm.modalSubtitle = 'Configure provider or staff exceptions';
+
+                    // Prepare provider exceptions (deep copy to avoid mutating until saved)
+                    vm.modalProviderExceptions = (setting.exceptions || []).filter(e => e.type === 'provider').map(e => {
+                        return {
+                            type: 'provider',
+                            name: e.name || '',
+                            noteTypes: Array.isArray(e.noteTypes) ? e.noteTypes.slice() : [],
+                            searchText: e.name || '',
+                            showDropdown: false,
+                            filteredProviders: []
+                        };
+                    });
+
+                    // Prepare staff exceptions
+                    vm.modalStaffExceptions = (setting.exceptions || []).filter(e => e.type === 'staff').map(e => {
+                        return {
+                            type: 'staff',
+                            name: e.name || '',
+                            noteTypes: Array.isArray(e.noteTypes) ? e.noteTypes.slice() : [],
+                            searchText: e.name || '',
+                            showDropdown: false,
+                            filteredStaff: []
+                        };
+                    });
+
+                    vm.activeModalTab = 'provider';
+                    vm.modalOpen = true;
+                };
+
+                vm.addProviderException = function () {
+                    vm.modalProviderExceptions.push({
+                        type: 'provider',
+                        name: '',
+                        noteTypes: [],
+                        searchText: '',
+                        showDropdown: false,
+                        filteredProviders: []
+                    });
+                };
+
+                vm.removeProviderException = function (index) {
+                    vm.modalProviderExceptions.splice(index, 1);
+                };
+
+                vm.addStaffException = function () {
+                    vm.modalStaffExceptions.push({
+                        type: 'staff',
+                        name: '',
+                        noteTypes: [],
+                        searchText: '',
+                        showDropdown: false,
+                        filteredStaff: []
+                    });
+                };
+
+                vm.removeStaffException = function (index) {
+                    vm.modalStaffExceptions.splice(index, 1);
+                };
+
+                vm.toggleNoteType = function (row, nt) {
+                    const i = row.noteTypes.indexOf(nt);
+                    if (i === -1) row.noteTypes.push(nt);
+                    else row.noteTypes.splice(i, 1);
+                };
+
+                vm.filterProviders = function (row) {
+                    const search = (row.searchText || '').toLowerCase();
+                    if (!search) {
+                        row.filteredProviders = vm.providers.slice();
+                    } else {
+                        row.filteredProviders = vm.providers.filter(p =>
+                            p.toLowerCase().indexOf(search) !== -1
+                        );
+                    }
+                    row.showDropdown = true;
+                };
+
+                vm.filterStaff = function (row) {
+                    const search = (row.searchText || '').toLowerCase();
+                    if (!search) {
+                        row.filteredStaff = vm.staff.slice();
+                    } else {
+                        row.filteredStaff = vm.staff.filter(s =>
+                            s.toLowerCase().indexOf(search) !== -1
+                        );
+                    }
+                    row.showDropdown = true;
+                };
+
+                vm.selectProvider = function (row, provider) {
+                    row.name = provider;
+                    row.searchText = provider;
+                    row.showDropdown = false;
+                };
+
+                vm.selectStaff = function (row, staff) {
+                    row.name = staff;
+                    row.searchText = staff;
+                    row.showDropdown = false;
+                };
+
+                vm.hideDropdown = function (row, event) {
+                    // Delay hiding to allow click events to fire
+                    setTimeout(function () {
+                        row.showDropdown = false;
+                        $scope.$applyAsync();
+                    }, 200);
+                };
+
+                vm.closeModal = function () {
+                    vm.modalOpen = false;
+                };
+
+                vm.overlayClick = function (e) {
+                    // close when clicking overlay background
+                    if (e.target.classList && e.target.classList.contains('modal-overlay')) {
+                        vm.closeModal();
+                        $scope.$applyAsync();
+                    }
+                };
+
+                vm.saveExceptions = function () {
+                    const setting = vm.sections[vm.currentSectionKey].settings.find(s => s.id === vm.currentSettingId);
+
+                    // Save provider exceptions
+                    const providerExceptions = vm.modalProviderExceptions
+                        .filter(r => r.name && r.name.trim())
+                        .map(r => {
+                            return {
+                                type: 'provider',
+                                name: r.name.trim(),
+                                noteTypes: r.noteTypes && r.noteTypes.length ? r.noteTypes.slice() : []
+                            };
+                        });
+
+                    // Save staff exceptions
+                    const staffExceptions = vm.modalStaffExceptions
+                        .filter(r => r.name && r.name.trim())
+                        .map(r => {
+                            return {
+                                type: 'staff',
+                                name: r.name.trim(),
+                                noteTypes: r.noteTypes && r.noteTypes.length ? r.noteTypes.slice() : []
+                            };
+                        });
+
+                    // Combine both types of exceptions
+                    setting.exceptions = [...providerExceptions, ...staffExceptions];
+                    vm.modalOpen = false;
+                };
+
+                // initial scope apply (not strictly necessary)
+                $scope.vm = vm;
+            }]);
+    </script>
+</body>
+
+</html>
