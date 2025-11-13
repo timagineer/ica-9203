@@ -510,6 +510,7 @@
                 <div class="content-header">
                     <h1>{{ vm.sections[vm.currentSectionKey].title }}</h1>
                     <p>{{ vm.sections[vm.currentSectionKey].desc }}</p>
+                    <p>Settings initially apply to all users; manage user excpetions below.</p>
                 </div>
                 <div class="settings-section">
                     <div class="setting-item" ng-repeat="setting in vm.sections[vm.currentSectionKey].settings">
@@ -541,7 +542,7 @@
             </div>
             <div class="modal-tabs">
                 <button class="modal-tab" ng-class="{'active': vm.activeModalTab === 'provider'}" ng-click="vm.activeModalTab='provider'">Provider Exceptions</button>
-                <button class="modal-tab" ng-if="vm.allowStaffExceptions" ng-class="{'active': vm.activeModalTab === 'staff'}" ng-click="vm.activeModalTab='staff'">Staff Exceptions</button>
+                <button class="modal-tab" ng-class="{'active': vm.activeModalTab === 'staff'}" ng-click="vm.activeModalTab='staff'">Staff Exceptions</button>
             </div>
             <div class="modal-body">
                 <div ng-if="vm.activeModalTab === 'provider'">
@@ -651,7 +652,6 @@
             vm.modalProviderExceptions = [];
             vm.modalStaffExceptions = [];
             vm.currentSettingId = null;
-            vm.allowStaffExceptions = true;
             vm.setSection = function (k) { vm.currentSectionKey = k; };
             vm.toggleSetting = function (sk, sid) { var s = vm.sections[sk].settings.find(function (x) { return x.id === sid; }); s.enabled = !s.enabled; };
             vm.openExceptionModal = function (sk, sid) {
@@ -661,9 +661,8 @@
                 vm.modalTitle = 'Manage Exceptions: ' + s.label;
                 vm.modalSubtitle = 'Configure provider or staff exceptions';
                 vm.noteTypes = vm.allNoteTypes[sid] || [];
-                vm.allowStaffExceptions = sid !== 'diagnosis-code';
                 vm.modalProviderExceptions = (s.exceptions || []).filter(function (e) { return e.type === 'provider'; }).map(function (e) { return { type: 'provider', name: e.name || '', noteTypes: Array.isArray(e.noteTypes) ? e.noteTypes.slice() : [], searchText: e.name || '', showDropdown: false, filteredProviders: [] }; });
-                if (vm.allowStaffExceptions) { vm.modalStaffExceptions = (s.exceptions || []).filter(function (e) { return e.type === 'staff'; }).map(function (e) { return { type: 'staff', name: e.name || '', noteTypes: Array.isArray(e.noteTypes) ? e.noteTypes.slice() : [], searchText: e.name || '', showDropdown: false, filteredStaff: [] }; }); } else { vm.modalStaffExceptions = []; }
+                vm.modalStaffExceptions = (s.exceptions || []).filter(function (e) { return e.type === 'staff'; }).map(function (e) { return { type: 'staff', name: e.name || '', noteTypes: Array.isArray(e.noteTypes) ? e.noteTypes.slice() : [], searchText: e.name || '', showDropdown: false, filteredStaff: [] }; });
                 vm.activeModalTab = 'provider';
                 vm.modalOpen = true;
             };
@@ -682,8 +681,7 @@
             vm.saveExceptions = function () {
                 var s = vm.sections[vm.currentSectionKey].settings.find(function (x) { return x.id === vm.currentSettingId; });
                 var pe = vm.modalProviderExceptions.filter(function (r) { return r.name && r.name.trim(); }).map(function (r) { return { type: 'provider', name: r.name.trim(), noteTypes: r.noteTypes && r.noteTypes.length ? r.noteTypes.slice() : [] }; });
-                var se = [];
-                if (vm.allowStaffExceptions) { se = vm.modalStaffExceptions.filter(function (r) { return r.name && r.name.trim(); }).map(function (r) { return { type: 'staff', name: r.name.trim(), noteTypes: r.noteTypes && r.noteTypes.length ? r.noteTypes.slice() : [] }; }); }
+                var se = vm.modalStaffExceptions.filter(function (r) { return r.name && r.name.trim(); }).map(function (r) { return { type: 'staff', name: r.name.trim(), noteTypes: r.noteTypes && r.noteTypes.length ? r.noteTypes.slice() : [] }; });
                 s.exceptions = pe.concat(se);
                 vm.modalOpen = false;
             };
